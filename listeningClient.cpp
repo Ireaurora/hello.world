@@ -1,5 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 
+#include <Windows.h>
+//#include <stdafx.h>
 #include <stdio.h>
 #include <iostream>
 #include <winsock2.h>
@@ -13,21 +15,16 @@
 
 int recvSock(SOCKET ListenSocket);
 
-int __cdecl main(int argc, char argv[]) 
+int __cdecl main(void) 
 {
 	WSADATA wsaData;
 
-	if (! WSAStartup(MAKEWORD(2, 2), &wsaData)) {
-		printf("[ERROR] WSAStartup failed");
-		return -1;
-	}
-
 	struct addrinfo *result = NULL, client;
-
-	if (!getaddrinfo(NULL, DEFAULT_PORT, &client, &result)) {
-		printf("[ERROR] in getaddrinfo");
-		WSACleanup();
-		return -1;
+	
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) {
+		printf("WSAStartup failed with error: %d\n", iResult);
+		return 1;
 	}
 
 
@@ -36,6 +33,12 @@ int __cdecl main(int argc, char argv[])
 	client.ai_socktype = SOCK_STREAM;
 	client.ai_protocol = IPPROTO_TCP;
 	client.ai_flags = AI_PASSIVE;
+
+	if ((iResult = getaddrinfo(NULL, DEFAULT_PORT, &client, &result)) != 0) {
+		printf("[ERROR] getaddrinfo failed");
+		WSACleanup();
+		return -1;
+	}
 
 	SOCKET ListenSocket;
 
@@ -47,7 +50,7 @@ int __cdecl main(int argc, char argv[])
 		return -1;
 	}
 
-	if (!bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen)) {
+	if (bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen) == SOCKET_ERROR) {
 		printf("[ERROR] binding socket");
 		freeaddrinfo(result);
 		closesocket(ListenSocket);
@@ -67,10 +70,10 @@ int __cdecl main(int argc, char argv[])
 int recvSock(SOCKET ListenSocket)
 {
 	SOCKET serverSocket;
-	char recvbuf[2048];
+	char recvbuf[8];
 	__int32 recvbuflen, recvBytes;
 
-	recvbuflen = 2048;
+	recvbuflen = 8;
 
 	if ((serverSocket = accept(ListenSocket, NULL, NULL)) == INVALID_SOCKET) {
 		printf("[ERROR] in serverSocket");
